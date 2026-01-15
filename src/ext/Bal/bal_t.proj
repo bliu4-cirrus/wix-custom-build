@@ -16,7 +16,7 @@
     <ProjectReference Include="wixext\WixToolset.BootstrapperApplications.wixext.csproj" Properties="NoBuild=true" Targets="Pack" />
     <ProjectReference Include="wixext-backward-compatible\WixToolset.Bal.wixext.csproj" Targets="Pack" />
 
-    <ProjectReference Include="test\examples\examples.proj" />
+    <!--ProjectReference Include="test\examples\examples.proj" /-->
 
     <ProjectReference Include="test\WixToolsetTest.BootstrapperApplications\WixToolsetTest.BootstrapperApplications.csproj" />
 

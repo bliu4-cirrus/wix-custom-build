@@ -326,7 +326,7 @@ extern "C" HRESULT CoreDetect(
     ExitOnFailure(hr, "Failed to detect forward compatible bundle.");
 
     // Report the related bundles.
-    hr = DetectReportRelatedBundles(&pEngineState->userExperience, &pEngineState->registration, pEngineState->command.relationType, &pEngineState->registration.fEligibleForCleanup);
+    hr = DetectReportRelatedBundles(&pEngineState->internalCommand, &pEngineState->userExperience, &pEngineState->registration, pEngineState->command.relationType, &pEngineState->registration.fEligibleForCleanup);
     ExitOnFailure(hr, "Failed to report detected related bundles.");
 
     // Do update detection.
@@ -1008,6 +1008,12 @@ static HRESULT CoreRecreateCommandLine(
     }
     ExitOnFailure(hr, "Failed to append action state to command-line");
 
+    if (pInternalCommand->fForceInstall)
+    {
+        hr = StrAllocConcat(psczCommandLine, L" /force", 0);
+        ExitOnFailure(hr, "Failed to append force to command-line");
+    }
+
     if (pInternalCommand->sczActiveParent)
     {
         if (*pInternalCommand->sczActiveParent)
@@ -1442,6 +1448,10 @@ extern "C" HRESULT CoreParseCommandLine(
                 {
                     pCommand->action = BOOTSTRAPPER_ACTION_MODIFY;
                 }
+            }
+            else if (CSTR_EQUAL == ::CompareStringOrdinal(&argv[i][1], -1, L"force", -1, TRUE))
+            {
+                pInternalCommand->fForceInstall = TRUE;
             }
             else if (CSTR_EQUAL == ::CompareStringOrdinal(&argv[i][1], -1, L"package", -1, TRUE) ||
                      CSTR_EQUAL == ::CompareStringOrdinal(&argv[i][1], -1, L"update", -1, TRUE))

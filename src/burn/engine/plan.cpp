@@ -1229,6 +1229,7 @@ LExit:
 }
 
 extern "C" HRESULT PlanDefaultRelatedBundlePlanType(
+    __in BURN_ENGINE_COMMAND* pCommand,
     __in BOOTSTRAPPER_RELATION_TYPE relatedBundleRelationType,
     __in VERUTIL_VERSION* pRegistrationVersion,
     __in VERUTIL_VERSION* pRelatedBundleVersion,
@@ -1247,6 +1248,12 @@ extern "C" HRESULT PlanDefaultRelatedBundlePlanType(
         if (nCompareResult < 0)
         {
             *pPlanRelationType = BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_DOWNGRADE;
+
+            if( pCommand->fForceInstall)
+            {
+                //[billliu] in case of force install, we treat downgrade as upgrade to force reinstall the related bundle.
+                *pPlanRelationType = BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_UPGRADE;
+            }
         }
         else
         {
@@ -1295,6 +1302,7 @@ extern "C" HRESULT PlanDefaultRelatedBundleRequestState(
 
     switch (relatedBundleRelationType)
     {
+    case BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_DOWNGRADE: __fallthrough;
     case BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_UPGRADE:
         if (BOOTSTRAPPER_RELATION_UPGRADE != commandRelationType && !fUninstalling)
         {
@@ -1326,7 +1334,7 @@ extern "C" HRESULT PlanDefaultRelatedBundleRequestState(
             *pRequestState = BOOTSTRAPPER_REQUEST_STATE_REPAIR;
         }
         break;
-    case BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_DOWNGRADE: __fallthrough;
+
     case BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_NONE:
         break;
     default:
@@ -1366,7 +1374,7 @@ extern "C" HRESULT PlanRelatedBundlesInitialize(
         // Determine the plan relation type even if later it is ignored due to the planned action, the command relation type, or the related bundle not being plannable.
         // This gives more information to the BA in case it wants to override default behavior.
         // Doing it during plan instead of Detect allows the BA to change its mind without having to go all the way through Detect again.
-        hr = PlanDefaultRelatedBundlePlanType(pRelatedBundle->detectRelationType, pRegistration->pVersion, pRelatedBundle->pVersion, &pRelatedBundle->defaultPlanRelationType);
+        hr = PlanDefaultRelatedBundlePlanType(pPlan->pInternalCommand, pRelatedBundle->detectRelationType, pRegistration->pVersion, pRelatedBundle->pVersion, &pRelatedBundle->defaultPlanRelationType);
         ExitOnFailure(hr, "Failed to get default plan type for related bundle.");
 
         pRelatedBundle->planRelationType = pRelatedBundle->defaultPlanRelationType;
@@ -1652,7 +1660,7 @@ extern "C" HRESULT PlanRelatedBundlesComplete(
             ExitOnFailure(hr, "Failed to complete plan dependency actions for related bundle package: %ls", pRelatedBundle->package.sczId);
         }
 
-        if (fInstallingAnyPackage && BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_UPGRADE == pRelatedBundle->planRelationType)
+        if (fInstallingAnyPackage && (BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_UPGRADE == pRelatedBundle->planRelationType || BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_DOWNGRADE == pRelatedBundle->planRelationType))
         {
             BURN_EXECUTE_ACTION* pAction = NULL;
 

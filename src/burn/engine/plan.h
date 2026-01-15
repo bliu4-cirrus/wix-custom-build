@@ -331,6 +331,7 @@ HRESULT PlanSetVariables(
     __in BURN_VARIABLES* pVariables
     );
 HRESULT PlanDefaultRelatedBundlePlanType(
+    __in BURN_ENGINE_COMMAND* pCommand,
     __in BOOTSTRAPPER_RELATION_TYPE relatedBundleRelationType,
     __in VERUTIL_VERSION* pRegistrationVersion,
     __in VERUTIL_VERSION* pRelatedBundleVersion,

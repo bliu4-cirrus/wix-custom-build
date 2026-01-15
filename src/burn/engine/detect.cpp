@@ -157,6 +157,7 @@ LExit:
 }
 
 extern "C" HRESULT DetectReportRelatedBundles(
+    __in BURN_ENGINE_COMMAND* pCommand,
     __in BURN_USER_EXPERIENCE* pUX,
     __in BURN_REGISTRATION* pRegistration,
     __in BOOTSTRAPPER_RELATION_TYPE relationType,
@@ -183,7 +184,7 @@ extern "C" HRESULT DetectReportRelatedBundles(
             planRelationType = BOOTSTRAPPER_RELATED_BUNDLE_PLAN_TYPE_NONE;
             uninstallRequestState = BOOTSTRAPPER_REQUEST_STATE_NONE;
 
-            hr = PlanDefaultRelatedBundlePlanType(pRelatedBundle->detectRelationType, pRegistration->pVersion, pRelatedBundle->pVersion, &planRelationType);
+            hr = PlanDefaultRelatedBundlePlanType(pCommand, pRelatedBundle->detectRelationType, pRegistration->pVersion, pRelatedBundle->pVersion, &planRelationType);
             ExitOnFailure(hr, "Failed to get the default plan type for related bundle for calculating fEligibleForCleanup");
 
             hr = PlanDefaultRelatedBundleRequestState(relationType, planRelationType, BOOTSTRAPPER_ACTION_UNINSTALL, &uninstallRequestState);

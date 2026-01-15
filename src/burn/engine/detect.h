@@ -26,6 +26,7 @@ HRESULT DetectForwardCompatibleBundles(
     );
 
 HRESULT DetectReportRelatedBundles(
+    __in BURN_ENGINE_COMMAND* pCommand,
     __in BURN_USER_EXPERIENCE* pUX,
     __in BURN_REGISTRATION* pRegistration,
     __in BOOTSTRAPPER_RELATION_TYPE relationType,

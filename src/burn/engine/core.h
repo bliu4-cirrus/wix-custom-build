@@ -108,6 +108,7 @@ typedef struct _BURN_ENGINE_COMMAND
     BOOL fArpSystemComponent;
     BOOL fDisableSystemRestore;
     BOOL fInitiallyElevated;
+    BOOL fForceInstall;
 
     LPWSTR sczActiveParent;
     LPWSTR sczAncestors;

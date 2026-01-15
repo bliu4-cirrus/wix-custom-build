@@ -4833,7 +4833,7 @@ public:
         m_fTriedToLaunchElevated = FALSE;
 
         m_fPrereq = fRunAsPrereqBA;
-        m_fHandleHelp = FALSE;
+        m_fHandleHelp = TRUE;
         m_fPreplanPrereqs = FALSE;
         m_fPrereqPackagePlanned = FALSE;
         m_fPrereqInstalled = FALSE;

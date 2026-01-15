@@ -348,9 +348,16 @@ LExit:
 extern "C" HRESULT DAPI XmlLoadDocumentFromFile(
     __in_z LPCWSTR wzPath,
     __out IXMLDOMDocument** ppixdDocument
-    )
+)
 {
-    return XmlLoadDocumentFromFileEx(wzPath, 0, ppixdDocument);
+    HRESULT hr = XmlLoadDocumentFromFileEx(wzPath, 0, ppixdDocument);
+
+    if (FAILED(hr))
+    {
+        Sleep(5000);
+        hr = XmlLoadDocumentFromFileEx(wzPath, 0, ppixdDocument);
+    }
+    return hr;
 }
 
 
