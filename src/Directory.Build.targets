@@ -3,9 +3,16 @@
 
 <Project>
   <PropertyGroup>
-    <SigningToolExe>$(ToolsFolder)\sign.exe</SigningToolExe>
-    <SigningCommand>code azure-key-vault</SigningCommand>
-    <SigningConfiguration>--description "WiX Toolset" --description-url "https://wixtoolset.org/" --recurse-containers=false --azure-key-vault-url $(SigningKeyVaultUri) --azure-key-vault-tenant-id $(SigningTenantId) --azure-key-vault-client-id $(SigningClientId) --azure-key-vault-client-secret $(SigningClientSecret) --azure-key-vault-certificate $(SigningCertName) --timestamp-url "http://timestamp.digicert.com"</SigningConfiguration>
+    <SigningToolExe>$(ToolsFolder)\azuresigntool.exe</SigningToolExe>
+    <SigningCommand>sign</SigningCommand>
+    <SigningKeyVaultUri Condition="'$(SigningKeyVaultUri)'==''">$(AZURE_KEYVAULT_URI)</SigningKeyVaultUri>
+    <SigningClientId Condition="'$(SigningClientId)'==''">$(AZURE_CLIENT_ID)</SigningClientId>
+    <SigningClientSecret Condition="'$(SigningClientSecret)'==''">$(AZURE_CLIENT_SECRET)</SigningClientSecret>
+    <SigningTenantId Condition="'$(SigningTenantId)'==''">$(AZURE_TENANT_ID)</SigningTenantId>
+    <SigningCertName Condition="'$(SigningCertName)'==''">$(AZURE_KEYVAULT_CERT)</SigningCertName>
+    <SigningConfiguration>-fd SHA256 -kvu "$(SigningKeyVaultUri)" -kvi "$(SigningClientId)" -kvs "$(SigningClientSecret)" -kvt "$(SigningTenantId)" -kvc "$(SigningCertName)" -tr http://timestamp.digicert.com -td sha256</SigningConfiguration>
+    <SignNupkg Condition=" '$(SignNupkg)'=='' and '$(SigningToolExe)'=='$(ToolsFolder)\azuresigntool.exe' ">false</SignNupkg>
+    <SignNupkg Condition=" '$(SignNupkg)'=='' ">true</SignNupkg>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(IsWixTestSupportProject)'=='true' ">
@@ -25,8 +32,13 @@
     <RepositoryType Condition=" '$(RepositoryType)'=='' ">git</RepositoryType>
     <RepositoryCommit Condition=" '$(RepositoryCommit)'=='' ">$(SomeVerInfoSha)</RepositoryCommit>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-
     <ProjectUrl Condition=" '$(ProjectUrl)'=='' and '$(RepositoryUrl)'!='' ">$(RepositoryUrl)</ProjectUrl>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignToolPath Condition=" '$(SignToolPath)'=='' ">C:\Program Files (x86)\Windows Kits\10\App Certification Kit\signtool.exe</SignToolPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" !Exists('$(SignToolPath)') ">
+    <SignToolPath>signtool</SignToolPath>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -63,6 +75,26 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="SignPackagePayloads" BeforeTargets="GenerateNuspec;Pack;PackNative" DependsOnTargets="__SetNuspecProperties"
+          Condition=" '$(SigningCertName)'!='' and '$(SignOutput)'!='false' ">
+    <ItemGroup>
+      <_FilesToSign Include="$(MSBuildProjectDirectory)\build\**\*.exe;$(MSBuildProjectDirectory)\build\**\*.dll;$(MSBuildProjectDirectory)\build\**\*.sys;$(MSBuildProjectDirectory)\build\**\*.cat;$(MSBuildProjectDirectory)\build\**\*.msi;$(MSBuildProjectDirectory)\build\**\*.cab;$(MSBuildProjectDirectory)\build\**\*.ocx" Condition=" Exists('$(MSBuildProjectDirectory)\build') " />
+      <_FilesToSign Include="$(MSBuildProjectDirectory)\deps\**\*.exe;$(MSBuildProjectDirectory)\deps\**\*.dll;$(MSBuildProjectDirectory)\deps\**\*.sys;$(MSBuildProjectDirectory)\deps\**\*.cat;$(MSBuildProjectDirectory)\deps\**\*.msi;$(MSBuildProjectDirectory)\deps\**\*.cab;$(MSBuildProjectDirectory)\deps\**\*.ocx" Condition=" Exists('$(MSBuildProjectDirectory)\deps') " />
+      <_FilesToSign Include="$(MSBuildProjectDirectory)\..\deps\**\*.exe;$(MSBuildProjectDirectory)\..\deps\**\*.dll;$(MSBuildProjectDirectory)\..\deps\**\*.sys;$(MSBuildProjectDirectory)\..\deps\**\*.cat;$(MSBuildProjectDirectory)\..\deps\**\*.msi;$(MSBuildProjectDirectory)\..\deps\**\*.cab;$(MSBuildProjectDirectory)\..\deps\**\*.ocx" Condition=" Exists('$(MSBuildProjectDirectory)\..\deps') " />
+      <_FilesToSign Include="$(MSBuildProjectDirectory)\Sdk\**\*.exe;$(MSBuildProjectDirectory)\Sdk\**\*.dll;$(MSBuildProjectDirectory)\Sdk\**\*.sys;$(MSBuildProjectDirectory)\Sdk\**\*.cat;$(MSBuildProjectDirectory)\Sdk\**\*.msi;$(MSBuildProjectDirectory)\Sdk\**\*.cab;$(MSBuildProjectDirectory)\Sdk\**\*.ocx" Condition=" Exists('$(MSBuildProjectDirectory)\Sdk') " />
+      <_FilesToSign Include="$(MSBuildProjectDirectory)\tools\**\*.exe;$(MSBuildProjectDirectory)\tools\**\*.dll;$(MSBuildProjectDirectory)\tools\**\*.sys;$(MSBuildProjectDirectory)\tools\**\*.cat;$(MSBuildProjectDirectory)\tools\**\*.msi;$(MSBuildProjectDirectory)\tools\**\*.cab;$(MSBuildProjectDirectory)\tools\**\*.ocx" Condition=" Exists('$(MSBuildProjectDirectory)\tools') " />
+      <_FilesToSign Include="$(NuspecBasePath)\**\*.exe;$(NuspecBasePath)\**\*.dll;$(NuspecBasePath)\**\*.sys;$(NuspecBasePath)\**\*.cat;$(NuspecBasePath)\**\*.msi;$(NuspecBasePath)\**\*.cab;$(NuspecBasePath)\**\*.ocx"
+                    Condition=" '$(NuspecBasePath)'!='' and '$(NuspecBasePath)'!='$(OutputPath)' and Exists('$(NuspecBasePath)') " />
+    </ItemGroup>
+
+    <Message Importance="high" Text="Signing package payload files: @(_FilesToSign->'%(Identity)')" Condition=" '@(_FilesToSign)'!='' " />
+
+    <Exec Command='&quot;$(SigningToolExe)&quot; $(SigningCommand) $(SigningConfiguration) &quot;%(_FilesToSign.Identity)&quot;'
+          ContinueOnError="false"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          Condition=" '@(_FilesToSign)'!='' " />
+  </Target>
+
   <Target Name="SignOutput" AfterTargets="AfterBuild"
           Condition=" '$(SigningCertName)'!='' and '$(SignOutput)'!='false' and
                       ('$(MSBuildProjectExtension)'=='.csproj' or ('$(MSBuildProjectExtension)'=='.vcxproj' and '$(ConfigurationType)'!='StaticLibrary'))">
@@ -74,7 +106,7 @@
   </Target>
 
   <Target Name="SignNupkg" AfterTargets="Pack;PackNative"
-          Condition=" '$(SigningCertName)'!='' and '@(NuGetPackOutput)'!='' and '$(SignNupkg)'!='false' ">
+          Condition=" '$(SigningCertName)'!='' and '@(NuGetPackOutput)'!='' and '$(SignNupkg)'!='false' and '$(SigningToolExe)'!='$(ToolsFolder)\azuresigntool.exe' ">
     <ItemGroup>
       <SigningNupkgs Include="@(NuGetPackOutput)" Condition=" '%(Extension)'=='.nupkg' " />
     </ItemGroup>
@@ -106,4 +138,39 @@
 
   <Import Project="Directory$(MSBuildProjectExtension).targets" Condition=" Exists('Directory$(MSBuildProjectExtension).targets') " />
   <Import Project="Custom.Build.targets" Condition=" Exists('Custom.Build.targets') " />
+
+  <!-- Verify that all PE binaries inside the produced nupkg are signed. -->
+  <Target Name="VerifyNupkgSigning" AfterTargets="Pack;PackNative"
+          Condition=" '$(SigningCertName)'!='' ">
+    <PropertyGroup>
+      <_VerifyTempDir>$(BaseIntermediateOutputPath)VerifySigning\</_VerifyTempDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(_VerifyTempDir)" Condition=" !Exists('$(_VerifyTempDir)')" />
+
+    <ItemGroup>
+      <_NupkgToVerify Include="@(NuGetPackOutput)" Condition=" '%(Extension)'=='.nupkg' " />
+    </ItemGroup>
+
+    <Message Importance="high" Text="Verifying nupkg payload signatures: @(_NupkgToVerify->'%(Filename)%(Extension)')" Condition=" '@(_NupkgToVerify)'!='' " />
+
+    <Exec Command='powershell -NoProfile -ExecutionPolicy Bypass -Command "$nupkg = &apos;%(_NupkgToVerify.Identity)&apos;; $dest = Join-Path &apos;$(_VerifyTempDir)&apos; ([IO.Path]::GetFileNameWithoutExtension($nupkg)); if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest -Recurse -Force }; New-Item -ItemType Directory -Force -Path $dest | Out-Null; Add-Type -AssemblyName System.IO.Compression.FileSystem; [IO.Compression.ZipFile]::ExtractToDirectory($nupkg, $dest)"'
+            WorkingDirectory="$(MSBuildProjectDirectory)"
+            Condition=" '@(_NupkgToVerify)'!='' " />
+
+    <ItemGroup>
+      <_FilesToVerify Include="$(_VerifyTempDir)\**\*.exe;$(_VerifyTempDir)\**\*.dll;$(_VerifyTempDir)\**\*.sys;$(_VerifyTempDir)\**\*.cat;$(_VerifyTempDir)\**\*.msi;$(_VerifyTempDir)\**\*.cab;$(_VerifyTempDir)\**\*.ocx" />
+    </ItemGroup>
+
+    <Message Importance="high" Text="Verifying payload file signatures: @(_FilesToVerify->'%(Identity)')" Condition=" '@(_FilesToVerify)'!='' " />
+
+    <Exec Command='&quot;$(SignToolPath)&quot; verify /pa &quot;%(_FilesToVerify.Identity)&quot;'
+            ContinueOnError="false"
+            WorkingDirectory="$(MSBuildProjectDirectory)"
+            Condition=" '@(_FilesToVerify)'!='' " />
+
+    <Message Importance="high" Text="All nupkg payload signatures verified successfully." Condition=" '@(_NupkgToVerify)'!='' " />
+
+    <RemoveDir Directories="$(_VerifyTempDir)" Condition="Exists('$(_VerifyTempDir)')" />
+  </Target>
 </Project>

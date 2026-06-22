@@ -40,7 +40,7 @@
     <AssemblyLanguage>1033</AssemblyLanguage>
     <AssemblyProduct>Burn</AssemblyProduct>
     <PackageId>WixToolset.Burn</PackageId>
-    <SignOutput>false</SignOutput>
+    <SignOutput>true</SignOutput>
   </PropertyGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
