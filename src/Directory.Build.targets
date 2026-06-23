@@ -149,7 +149,7 @@
   <Target Name="VerifyNupkgSigning" AfterTargets="Pack;PackNative"
           Condition=" '$(SigningCertName)'!='' ">
     <PropertyGroup>
-      <_VerifyTempDir>$(BaseIntermediateOutputPath)VerifySigning\</_VerifyTempDir>
+      <_VerifyTempDir>$(RootBuildFolder)v\$(MSBuildProjectName)\</_VerifyTempDir>
     </PropertyGroup>
 
     <MakeDir Directories="$(_VerifyTempDir)" Condition=" !Exists('$(_VerifyTempDir)')" />

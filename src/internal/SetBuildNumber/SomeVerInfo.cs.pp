@@ -9,7 +9,7 @@ partial class SomeVerInfo
   /// <summary>File version: {fileversion}</summary>
   public const string FileVersion = @"{fileversion}";
 
-  /// <summary>Commits on top of base version: 2</summary>
+  /// <summary>Commits on top of base version: {height}</summary>
   public const string Commits = @"{height}";
 
   /// <summary>Major version: {major}</summary>
