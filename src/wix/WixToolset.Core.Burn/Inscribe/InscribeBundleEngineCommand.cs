@@ -58,7 +58,52 @@ namespace WixToolset.Core.Burn.Inscribe
                 // TODO: update writer with detached container signatures.
             }
 
+            this.ClearPeCertificateTable(tempFile);
+
             this.FileSystem.MoveFile(null, tempFile, this.OutputFile);
+        }
+
+        private void ClearPeCertificateTable(string path)
+        {
+            const int DosHeaderLfanewOffset = 0x3c;
+            const int NtSignatureSize = 4;
+            const int FileHeaderSize = 20;
+            const int OptionalHeaderMagicPe32 = 0x10b;
+            const int OptionalHeaderMagicPe32Plus = 0x20b;
+            const int Pe32DataDirectoriesOffset = 96;
+            const int Pe32PlusDataDirectoriesOffset = 112;
+            const int ImageDirectoryEntrySecurity = 4;
+            const int ImageDataDirectorySize = 8;
+
+            using (var stream = File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
+            using (var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, true))
+            using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, true))
+            {
+                stream.Seek(DosHeaderLfanewOffset, SeekOrigin.Begin);
+                var peHeaderOffset = reader.ReadInt32();
+
+                var optionalHeaderOffset = peHeaderOffset + NtSignatureSize + FileHeaderSize;
+                stream.Seek(optionalHeaderOffset, SeekOrigin.Begin);
+                var optionalHeaderMagic = reader.ReadUInt16();
+
+                int dataDirectoriesOffset;
+                if (optionalHeaderMagic == OptionalHeaderMagicPe32)
+                {
+                    dataDirectoriesOffset = optionalHeaderOffset + Pe32DataDirectoriesOffset;
+                }
+                else if (optionalHeaderMagic == OptionalHeaderMagicPe32Plus)
+                {
+                    dataDirectoriesOffset = optionalHeaderOffset + Pe32PlusDataDirectoriesOffset;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Unexpected PE optional header magic: 0x{optionalHeaderMagic:X4}");
+                }
+
+                stream.Seek(dataDirectoriesOffset + (ImageDirectoryEntrySecurity * ImageDataDirectorySize), SeekOrigin.Begin);
+                writer.Write(0u);
+                writer.Write(0u);
+            }
         }
     }
 }
