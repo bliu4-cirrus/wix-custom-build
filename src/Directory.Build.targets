@@ -13,6 +13,7 @@
     <SigningConfiguration>-fd SHA256 -kvu "$(SigningKeyVaultUri)" -kvi "$(SigningClientId)" -kvs "$(SigningClientSecret)" -kvt "$(SigningTenantId)" -kvc "$(SigningCertName)" -tr http://timestamp.digicert.com -td sha256</SigningConfiguration>
     <SignNupkg Condition=" '$(SignNupkg)'=='' and '$(SigningToolExe)'=='$(ToolsFolder)\azuresigntool.exe' ">false</SignNupkg>
     <SignNupkg Condition=" '$(SignNupkg)'=='' ">true</SignNupkg>
+    <SignPackagePayloads Condition=" '$(SignPackagePayloads)'=='' ">true</SignPackagePayloads>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(IsWixTestSupportProject)'=='true' ">
@@ -76,8 +77,13 @@
   </Target>
 
   <Target Name="SignPackagePayloads" BeforeTargets="GenerateNuspec;Pack;PackNative" DependsOnTargets="__SetNuspecProperties"
-          Condition=" '$(SigningCertName)'!='' and '$(SignOutput)'!='false' ">
+          Condition=" '$(SigningCertName)'!='' and '$(SignPackagePayloads)'!='false' ">
     <ItemGroup>
+      <_FilesToSign Include="$(TargetPath)" Condition=" '$(TargetPath)'!='' and Exists('$(TargetPath)') and ('$(TargetExt)'=='.exe' or '$(TargetExt)'=='.dll' or '$(TargetExt)'=='.sys' or '$(TargetExt)'=='.cat' or '$(TargetExt)'=='.msi' or '$(TargetExt)'=='.cab' or '$(TargetExt)'=='.ocx') " />
+      <_FilesToSign Include="$(OutputPath)$(AssemblyName).dll" Condition=" '$(OutputPath)'!='' and '$(AssemblyName)'!='' and Exists('$(OutputPath)$(AssemblyName).dll') " />
+      <_FilesToSign Include="$(OutputPath)$(AssemblyName).exe" Condition=" '$(OutputPath)'!='' and '$(AssemblyName)'!='' and Exists('$(OutputPath)$(AssemblyName).exe') " />
+      <_FilesToSign Include="$(BaseOutputPath)$(Configuration)\**\$(AssemblyName).dll" Condition=" '$(BaseOutputPath)'!='' and '$(Configuration)'!='' and '$(AssemblyName)'!='' and Exists('$(BaseOutputPath)$(Configuration)') " />
+      <_FilesToSign Include="$(BaseOutputPath)$(Configuration)\**\$(AssemblyName).exe" Condition=" '$(BaseOutputPath)'!='' and '$(Configuration)'!='' and '$(AssemblyName)'!='' and Exists('$(BaseOutputPath)$(Configuration)') " />
       <_FilesToSign Include="$(MSBuildProjectDirectory)\build\**\*.exe;$(MSBuildProjectDirectory)\build\**\*.dll;$(MSBuildProjectDirectory)\build\**\*.sys;$(MSBuildProjectDirectory)\build\**\*.cat;$(MSBuildProjectDirectory)\build\**\*.msi;$(MSBuildProjectDirectory)\build\**\*.cab;$(MSBuildProjectDirectory)\build\**\*.ocx" Condition=" Exists('$(MSBuildProjectDirectory)\build') " />
       <_FilesToSign Include="$(MSBuildProjectDirectory)\deps\**\*.exe;$(MSBuildProjectDirectory)\deps\**\*.dll;$(MSBuildProjectDirectory)\deps\**\*.sys;$(MSBuildProjectDirectory)\deps\**\*.cat;$(MSBuildProjectDirectory)\deps\**\*.msi;$(MSBuildProjectDirectory)\deps\**\*.cab;$(MSBuildProjectDirectory)\deps\**\*.ocx" Condition=" Exists('$(MSBuildProjectDirectory)\deps') " />
       <_FilesToSign Include="$(MSBuildProjectDirectory)\..\deps\**\*.exe;$(MSBuildProjectDirectory)\..\deps\**\*.dll;$(MSBuildProjectDirectory)\..\deps\**\*.sys;$(MSBuildProjectDirectory)\..\deps\**\*.cat;$(MSBuildProjectDirectory)\..\deps\**\*.msi;$(MSBuildProjectDirectory)\..\deps\**\*.cab;$(MSBuildProjectDirectory)\..\deps\**\*.ocx" Condition=" Exists('$(MSBuildProjectDirectory)\..\deps') " />
